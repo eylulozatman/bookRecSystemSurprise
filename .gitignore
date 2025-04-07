@@ -1,0 +1,7 @@
+# Python virtual environment
+venv/
+models/books.csv
+models/cleaned_bookdata.csv
+book_info.csv
+models/item_based_model
+models/user_based_model
