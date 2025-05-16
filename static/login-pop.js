@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const loginBtn = document.getElementById('loginBtn');
+    const loginBtn = document.getElementById('login-btn');
     const loginModal = document.getElementById('loginModal');
-    const loginSubmitBtn = document.getElementById('login-submit');
-    const userIdInput = document.getElementById('user-id-modal'); // ✔️ doğru ID bu
+    const loginSubmitBtn = document.getElementById('login-submit-btn');
+    const userIdInput = document.getElementById('user-id-modal-input'); 
 
     if (loginBtn && loginModal) {
         loginBtn.addEventListener('click', function () {
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ userId: userId })  // Bu aslında backend'te kullanılmıyor ama dursun sorun değil
+                body: JSON.stringify({ userId: userId })  // backend'te kullanılmasa da sorun olmaz
             })
             .then(response => response.json())
             .then(data => {

@@ -1,10 +1,25 @@
+#userService.py
 from flask import Blueprint, request, jsonify, render_template
-user_service_bp = Blueprint('user_service', __name__)
+
+from model_trainer import incremental_update
 import os , math, csv 
 import pandas as pd
+from models_loader import load_models_and_data
+from recommend_algorithm import get_hybrid_recommendations
+
+user_service_bp = Blueprint('user_service', __name__)
+
+
 
 BOOK_INFO_CSV = 'models/book_info.csv'
 COMPLETE_CSV = 'models/newbookdata.csv'
+
+models = load_models_and_data()
+
+
+@user_service_bp.route('/user/<int:user_id>/service')
+def user_service(user_id):
+    return render_template('userService.html', user_id=user_id)
 
 
 @user_service_bp.route('/api/search/books/<query>', methods=['GET'])
@@ -72,14 +87,27 @@ def add_book(user_id):
     if not all([isbn, rating, title, author, image]):
         return jsonify({'success': False, 'message': 'Missing data'}), 400
 
-    new_row = [user_id, isbn, rating, title, author, image]
-
-    with open(COMPLETE_CSV, 'a', newline='', encoding='utf-8') as f:
+    new_row = [user_id, data['isbn'], data['rating'], data['title'], data['author'], data['image']]
+    with open(COMPLETE_CSV, 'a') as f:
         writer = csv.writer(f)
         writer.writerow(new_row)
 
-    return jsonify({'success': True, 'message': f'Book {title} added for user {user_id}'})
+    # 2. Modeli anlık güncelle
+    incremental_update(str(user_id), data['isbn'], float(data['rating']))
+    
+    # 3. Bellekteki user_history'i güncelle
+    if user_id not in models['user_history']:
+        models['user_history'][user_id] = []
+    
+    models['user_history'][user_id].append({
+        'isbn': data['isbn'],
+        'title': data['title'],
+        'rating': float(data['rating']),
+        'author': data['author'],
+        'image_url': data['image']
+    })
 
+    return jsonify({'success': True})
 
 @user_service_bp.route('/mybooklist/<int:user_id>')
 def my_book_list(user_id):
@@ -88,7 +116,7 @@ def my_book_list(user_id):
 @user_service_bp.route('/api/user/<user_id>/books', methods=['GET'])
 def get_user_books(user_id):
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = 5
     try:
         with open(COMPLETE_CSV, encoding='utf-8') as f:
             reader = csv.reader(f)
@@ -115,118 +143,14 @@ def get_user_books(user_id):
         return jsonify({'success': False, 'message': str(e), 'books': [], 'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 0}), 500
 
 
-@user_service_bp.route('/api/user/<user_id>/recommend', methods=['GET'])
+@user_service_bp.route('/api/user/<user_id>/hybrid-recommend', methods=['GET'])
 def get_recommendations(user_id):
+    
     try:
-        # Kullanıcının kitaplarını oku
-        user_books = set()
-        user_ratings = {}
-        all_users_books = {}
-        all_users_ratings = {}
-
-        with open(COMPLETE_CSV, newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                uid, isbn, rating, title, author, image = row
-                if uid == user_id:
-                    user_books.add(isbn)
-                    user_ratings[isbn] = float(rating)
-                else:
-                    all_users_books.setdefault(uid, set()).add(isbn)
-                    all_users_ratings.setdefault(uid, {})[isbn] = float(rating)
-
-        # Kullanıcıya en çok ortak kitabı olan kullanıcıları bul ve benzerlik skoru hesapla
-        similarity_scores = []
-        for other_uid, books_set in all_users_books.items():
-            common_books = user_books.intersection(books_set)
-            if not common_books:
-                continue
-                
-            # Cosine similarity hesapla
-            dot_product = 0
-            user_norm = 0
-            other_norm = 0
+        result, error = get_hybrid_recommendations(models, str(user_id))
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
             
-            for book in common_books:
-                user_rating = user_ratings[book]
-                other_rating = all_users_ratings[other_uid].get(book, 0)
-                
-                dot_product += user_rating * other_rating
-                user_norm += user_rating ** 2
-                other_norm += other_rating ** 2
-                
-            if user_norm == 0 or other_norm == 0:
-                similarity = 0
-            else:
-                similarity = dot_product / (math.sqrt(user_norm) * math.sqrt(other_norm))
-            
-            similarity_scores.append((other_uid, similarity, len(common_books)))
-
-        # Benzerlik skoruna göre sırala
-        similarity_scores.sort(key=lambda x: x[1], reverse=True)
-        top_neighbors = [uid for uid, sim, count in similarity_scores[:3]]  # ilk 3 komşu
-
-        # Komşuların kitaplarından, kullanıcının olmayanları topla ve tahmini puan hesapla
-        recommendations = {}
-        book_counts = {}
-        
-        for neighbor in top_neighbors:
-            neighbor_similarity = next(sim for uid, sim, cnt in similarity_scores if uid == neighbor)
-            
-            for isbn, rating in all_users_ratings[neighbor].items():
-                if isbn not in user_books:
-                    if isbn not in recommendations:
-                        recommendations[isbn] = {
-                            'title': '',
-                            'author': '',
-                            'image': '',
-                            'weighted_sum': 0,
-                            'similarity_sum': 0
-                        }
-                        book_counts[isbn] = 0
-                    
-                    recommendations[isbn]['weighted_sum'] += rating * neighbor_similarity
-                    recommendations[isbn]['similarity_sum'] += neighbor_similarity
-                    book_counts[isbn] += 1
-
-        # Kitap bilgilerini ve tahmini puanları ekle
-        rec_list = []
-        with open(BOOK_INFO_CSV, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['ISBN'] in recommendations:
-                    rec = recommendations[row['ISBN']]
-                    rec['title'] = row['Book-Title']
-                    rec['author'] = row['Book-Author']
-                    rec['image'] = row['Image-URL-M']
-                    
-                    # Tahmini puan hesapla (0-10 arasında)
-                    if rec['similarity_sum'] > 0:
-                        predicted = rec['weighted_sum'] / rec['similarity_sum']
-                        predicted = max(0, min(10, predicted))  # 0-10 arasında kırp
-                    else:
-                        predicted = 5  # default
-                        
-                    rec_list.append({
-                        'isbn': row['ISBN'],
-                        'title': rec['title'],
-                        'author': rec['author'],
-                        'image': rec['image'],
-                        'similarity': rec['similarity_sum'] / book_counts[row['ISBN']],
-                        'predicted_rating': predicted
-                    })
-
-        # Tahmini puana göre sırala
-        rec_list.sort(key=lambda x: x['predicted_rating'], reverse=True)
-        
-        return jsonify({
-            'success': True, 
-            'recommendations': rec_list[:5]  # en iyi 5 öneri
-        })
-
+        return jsonify({'success': True, **result})
     except Exception as e:
-        print(f"Error in recommendations: {str(e)}")
-        return jsonify({
-            'success': False, 
-            'message': 'Error generating recommendations'
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500

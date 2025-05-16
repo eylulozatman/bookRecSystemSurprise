@@ -1,85 +1,170 @@
+/* --- Renk Paleti --- */
+:root {
+  --red: #b33030;
+  --red-dark: #7a2020;
+  --red-light: #d86060;
+
+  --gray-dark: #4a4a4a;
+  --gray-medium: #7d7d7d;
+  --gray-light: #d3d3d3;
+
+  --bg-lightgray: #f9f9f9;
+  --white: #ffffff;
+}
+
+/* Genel Gövde */
 body {
-    background-color: #f8f9fa;
-    padding-bottom: 2rem;
+  background-color: var(--bg-lightgray);
+  color: var(--gray-dark);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.navbar {
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* Navbar */
+.bg-dark-red {
+  background-color: var(--red-dark) !important;
 }
 
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Kartlar */
 .card {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    margin-bottom: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(179, 48, 48, 0.15);
 }
 
-.card-header {
-    font-weight: bold;
+/* Borders */
+.border-red {
+  border: 2px solid var(--red);
 }
 
-.table th {
-    background-color: #343a40;
-    color: white;
-    position: sticky;
-    top: 0;
+.border-gray {
+  border: 2px solid var(--gray-medium);
 }
 
-#error-alert {
-    margin-bottom: 1rem;
+.border-lightgray {
+  border: 1px solid var(--gray-light);
 }
 
-.btn {
-    transition: all 0.2s;
+/* Headers */
+.bg-red {
+  background-color: var(--red);
 }
 
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.bg-gray {
+  background-color: var(--gray-medium);
 }
 
-.table-responsive {
-    max-height: 500px;
-    overflow-y: auto;
+.bg-lightgray {
+  background-color: var(--gray-light);
+  color: var(--gray-dark);
 }
 
-.img-thumbnail {
-    max-height: 80px;
-    width: auto;
+/* Buttons */
+.btn-red {
+  background-color: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.btn-red:hover, 
+.btn-red:focus {
+  background-color: var(--red-dark);
+  border-color: var(--red-dark);
+  color: var(--white);
+  box-shadow: 0 0 8px var(--red-dark);
+}
+
+/* Gri Buton */
+.btn-gray {
+  background-color: var(--gray-medium);
+  border-color: var(--gray-medium);
+  color: var(--white);
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.btn-gray:hover, 
+.btn-gray:focus {
+  background-color: var(--gray-dark);
+  border-color: var(--gray-dark);
+  color: var(--white);
+  box-shadow: 0 0 8px var(--gray-dark);
+}
+
+/* Similar Users Styling */
+.similar-users-container {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .similar-user {
-    display: inline-block;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    padding: 8px 12px;
-    background-color: #e9ecef;
-    border-radius: 20px;
-    font-size: 0.9rem;
+  background-color: var(--red-light);
+  color: var(--white);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 0 5px var(--red-light);
+  cursor: default;
 }
 
-.similar-user .similarity {
-    font-weight: bold;
-    color: #0d6efd;
+/* Source Book Styling */
+.source-book-container {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 10px;
+  background-color: var(--gray-light);
+  border-radius: 6px;
 }
 
-#source-book {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 5px;
-    margin-bottom: 20px;
+.source-book-container img {
+  max-height: 80px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
 }
 
-.source-book-info {
-    margin-left: 15px;
+.source-book-container .book-info {
+  font-weight: 600;
+  color: var(--gray-dark);
 }
 
-.source-book-title {
-    font-weight: bold;
-    font-size: 1.1rem;
+/* Tablo Görünümü */
+table th, table td {
+  vertical-align: middle !important;
+  text-align: center;
 }
 
-.source-book-author {
-    color: #6c757d;
+table img {
+  max-height: 80px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+/* Hata Mesajı */
+#error-message {
+  font-weight: 700;
+}
+
+/* Modal Başlık */
+.modal-header.bg-red {
+  background-color: var(--red);
+  color: var(--white);
+}
+
+.btn-close-white {
+  filter: brightness(0) invert(1);
+}
+
+/* Responsive Uyumluluk */
+@media (max-width: 768px) {
+  .similar-users-container {
+    justify-content: center;
+  }
 }

@@ -3,11 +3,12 @@ import csv
 from models_loader import load_models_and_data
 from recommend_algorithm import get_user_based_recommendations, get_item_based_recommendations
 from userService import user_service_bp
+from model_trainer import schedule_retrain
 
 app = Flask(__name__)
 app.register_blueprint(user_service_bp)
 
-
+schedule_retrain(hour=3) 
 USERS_CSV = 'models/users.csv'
 models = load_models_and_data()
 
@@ -17,7 +18,7 @@ def home():
     return render_template('index.html')
 
 
-@app.route('/api/search/users/<prefix>')
+@app.route('/api/autofill/users/<prefix>')
 def search_users(prefix):
     if not models:
         return jsonify({'error': 'Models not loaded'}), 500
@@ -25,7 +26,7 @@ def search_users(prefix):
     return jsonify({'results': matches[:10]})
 
 
-@app.route('/api/search/books/<prefix>')
+@app.route('/api/autofill/books/<prefix>')
 def search_books(prefix):
     if not models:
         return jsonify({'error': 'Models not loaded'}), 500

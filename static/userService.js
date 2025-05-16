@@ -175,7 +175,7 @@ async function performSearch(query, page) {
 function markAsAdded(ratingSection) {
     const addedLabel = document.createElement('span');
     addedLabel.textContent = '✓ Already in your library';
-    addedLabel.style.color = 'purple';
+    addedLabel.style.color = 'red';
     addedLabel.style.fontWeight = 'bold';
     ratingSection.appendChild(addedLabel);
 }

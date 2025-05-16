@@ -1,34 +1,27 @@
 :root {
-  /* Renkler */
-  --dark-gray: #2f2f2f;
-  --medium-gray: #595959;
-  --light-gray: #bfbfbf;
-  --background-gray: #5e5e5e;
-  --accent-color: #2d3354; /* Canlı mavi */
-  --accent-color-hover: #303f89; /* Hover için biraz koyu mavi */
-  --success-green: #3d3e76;
-  --success-green-hover: #353566;
-  --white: #9b9285;
-  --black: #000000;
+  --red: #b33030;
+  --red-dark: #7a2020;
+  --red-light: #d86060;
+  --gray-dark: #4a4a4a;
+  --gray-medium: #7d7d7d;
+  --gray-light: #d3d3d3;
+  --bg-lightgray: #f9f9f9;
+  --white: #ffffff;
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
-  /* Geçişler */
-  --transition: all 0.3s ease;
-  
-  /* Font */
-  --font-family: Arial, sans-serif;
 }
 
 body {
   margin: 0;
   font-family: var(--font-family);
   display: flex;
-  background-color: var(--background-gray);
+  background-color: var(--gray-dark);
   color: var(--white);
 }
 
 #sidebar {
   width: 220px;
-  background-color: var(--dark-gray);
+  background-color: var(--gray-dark);
   color: var(--white);
   padding: 25px;
   height: 100vh;
@@ -39,7 +32,7 @@ body {
   font-size: 1.3rem;
   margin-bottom: 30px;
   padding-bottom: 15px;
-  border-bottom: 1px solid var(--medium-gray);
+  border-bottom: 1px solid var(--gray-medium);
   font-weight: 600;
 }
 
@@ -48,17 +41,17 @@ body {
   width: 100%;
   padding: 10px 15px;
   margin-bottom: 12px;
-  background-color: var(--medium-gray);
+  background-color: var(--red);
   color: var(--white);
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s ease;
   font-weight: 500;
 }
 
 #sidebar button:hover {
-  background-color: var(--accent-color-hover);
+  background-color: var(--red-dark);
   transform: translateY(-2px);
 }
 
@@ -78,23 +71,24 @@ body {
   padding: 10px;
   font-size: 16px;
   border-radius: 8px 0 0 8px;
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--gray-light);
+  background-color: var(--bg-lightgray);
 }
 
 #searchBtn {
   padding: 10px 20px;
   font-size: 16px;
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--gray-light);
   border-left: none;
   border-radius: 0 8px 8px 0;
-  background-color: var(--accent-color);
+  background-color: var(--red);
   color: var(--white);
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s ease;
 }
 
 #searchBtn:hover {
-  background-color: var(--accent-color-hover);
+  background-color: var(--red-dark);
 }
 
 .result-item {
@@ -106,14 +100,14 @@ body {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   gap: 15px;
-  color: var(--black);
+  color: var(--gray-dark);
 }
 
 .result-item img {
   height: 100px;
   width: 70px;
   object-fit: contain;
-  border: 1px solid #eee;
+  border: 1px solid var(--gray-light);
 }
 
 .book-info {
@@ -133,21 +127,21 @@ body {
 .rating-section select {
   padding: 5px;
   border-radius: 4px;
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--gray-light);
 }
 
 .result-item button {
   padding: 5px 15px;
-  background-color: var(--success-green);
+  background-color: var(--red);
   color: var(--white);
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s ease;
 }
 
 .result-item button:hover {
-  background-color: var(--success-green-hover);
+  background-color: var(--red-dark);
 }
 
 #pagination {
@@ -158,15 +152,15 @@ body {
 #pagination button {
   padding: 5px 10px;
   margin: 2px;
-  border: 1px solid var(--light-gray);
-  background-color: var(--accent-color);
+  border: 1px solid var(--gray-light);
+  background-color: var(--red);
   color: var(--white);
   cursor: pointer;
   border-radius: 4px;
-  transition: var(--transition);
+  transition: all 0.3s ease;
 }
 
 #pagination button:disabled {
-  background-color: var(--medium-gray);
+  background-color: var(--gray-medium);
   cursor: default;
 }

@@ -2,6 +2,7 @@
 from surprise import dump
 import pandas as pd
 from collections import defaultdict
+from surprise import Trainset
 
 def load_models_and_data():
     try:
@@ -46,3 +47,5 @@ def load_models_and_data():
         return None
 
 models = load_models_and_data()
+
+

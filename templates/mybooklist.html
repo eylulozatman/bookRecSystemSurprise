@@ -10,29 +10,36 @@
 <body>
   <div id="sidebar">
     <div id="userIdDisplay">{{ user_id }}</div>
-    <button id="backToSearchBtn">Back to Search</button>
-    <button id="backBtn">Back to Main Page</button>
+    <button class="btn" id="backToSearchBtn">Back to Search</button>
+    <button class="btn" id="backBtn">Back to Main Page</button>
   </div>
   
   <div id="mainContainer">
     <h1>My Book Library</h1>
     
+    <div id="paginationControls">
+      <button id="prevPage">Previous</button>
+      <span id="pageInfo"></span>
+      <button id="nextPage">Next</button>
+    </div>
+
     <div id="bookListContainer">
       <div id="bookListHeader">
-        <div id="paginationControls">
-          <button id="prevPage">Previous</button>
-          <span id="pageInfo">/span>
-          <button id="nextPage">Next</button>
-        </div>
       </div>
       <div id="myBookListResults"></div>
     </div>
 
     <div id="recommendationSection">
-      <button id="getRecommendationsBtn">Get Recommendations</button>
-      <div id="recommendationResults"></div>
+  <button id="getRecommendationsBtn" class="recommend-btn">Get Recommendations</button>
+  <div id="recommendationResults">
+    <!-- Yükleme animasyonu -->
+    <div id="loadingRing" class="loading-ring" style="display: none;">
+      <div class="ring"></div>
+      <p>loading...</p>
     </div>
+    <!-- Öneriler buraya gelecek -->
   </div>
+</div>
 
   <script src="{{ url_for('static', filename='mybooklist.js') }}"></script>
 </body>

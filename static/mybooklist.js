@@ -1,153 +1,141 @@
-// Configuration
-let currentPage = 1;
-const booksPerPage = 10;
-let totalBooks = 0;
-let allBooks = [];
+document.addEventListener('DOMContentLoaded', () => {
+  const userId = document.getElementById('userIdDisplay').textContent.trim();
+  const bookListContainer = document.getElementById('myBookListResults');
+  const recommendationResults = document.getElementById('recommendationResults');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  const getRecommendationsBtn = document.getElementById('getRecommendationsBtn');
+  const loadingRing = document.getElementById('loadingRing');
 
-// DOM Elements
-const userIdDisplay = document.getElementById('userIdDisplay');
-const myBookListResults = document.getElementById('myBookListResults');
-const prevPageBtn = document.getElementById('prevPage');
-const nextPageBtn = document.getElementById('nextPage');
-const pageInfo = document.getElementById('pageInfo');
-const getRecommendationsBtn = document.getElementById('getRecommendationsBtn');
-const recommendationResults = document.getElementById('recommendationResults');
+  let currentPage = 1;
+  let totalPages = 1;
 
-// Navigation Buttons
-document.getElementById('backBtn').addEventListener('click', () => window.location.href = '/');
-document.getElementById('backToSearchBtn').addEventListener('click', () => {
-    window.location.href = `/login-handle/${userIdDisplay.textContent}`;
-});
-
-// Load books on page load
-document.addEventListener('DOMContentLoaded', () => loadBooks(userIdDisplay.textContent));
-
-// Load books from API with pagination
-async function loadBooks(userId) {
-    try {
-        const res = await fetch(`/api/user/${userId}/books?page=${currentPage}`);
-        const data = await res.json();
-
+  // Fetch books
+  function fetchBooks(page = 1) {
+    fetch(`/api/user/${userId}/books?page=${page}`)
+      .then(res => res.json())
+      .then(data => {
         if (data.success) {
-            allBooks = data.books;
-            totalBooks = data.total;
-            updatePagination();
-            displayBooks();
+          currentPage = data.page;
+          totalPages = data.total_pages;
+          renderBooks(data.books);
+          updatePagination();
         } else {
-            showNoBooksMessage(data.message || 'Failed to load books');
+          showMessage(bookListContainer, data.message || "Failed to load books.");
         }
-    } catch (error) {
-        console.error('Error loading books:', error);
-        showNoBooksMessage('Error loading books');
-    }
-}
+      })
+      .catch(err => {
+        showMessage(bookListContainer, `Error: ${err}`);
+      });
+  }
 
-// Display books in 2 rows with max 5 books each
-function displayBooks() {
-    myBookListResults.innerHTML = '';
-    if (allBooks.length === 0) {
-        showNoBooksMessage('You have no books in your list yet');
+  // Render books
+  function renderBooks(books) {
+    if (books.length === 0) {
+      showMessage(bookListContainer, "No books found.");
+      return;
+    }
+
+    const cards = books.map(book => `
+      <div class="book-card card">
+        <img src="${book.image}" alt="${book.title}">
+        <div class="book-info">
+          <h3 title="${book.title}">${book.title}</h3>
+          <div class="book-author text-muted font-sm">${book.author}</div>
+          <div class="book-isbn font-sm">ISBN: ${book.isbn}</div>
+          <div class="book-rating font-sm">Rating: ${book.rating} / 10</div>
+        </div>
+      </div>
+    `).join('');
+
+    bookListContainer.innerHTML = cards;
+  }
+
+  // Update pagination
+  function updatePagination() {
+    pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+    prevPageBtn.disabled = currentPage <= 1;
+    nextPageBtn.disabled = currentPage >= totalPages;
+  }
+
+ function fetchRecommendations() {
+    console.log("Fetching recommendations...");
+    loadingRing.style.display = 'flex';
+    
+    fetch(`/api/user/${userId}/hybrid-recommend`)
+        .then(res => {
+            console.log("Response status:", res.status);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            console.log("Recommendation data:", data);
+            if (data.success) {
+                renderRecommendations(data.recommendations || []);
+            } else {
+                console.error("Recommendation error:", data.error);
+                showMessage(recommendationResults, data.error);
+            }
+        })
+        .catch(err => {
+            console.error("Fetch error:", err);
+            showMessage(recommendationResults, "Error: " + err.message);
+        })
+        .finally(() => {
+            loadingRing.style.display = 'none';
+        });
+}
+  // Render recommendation cards
+  function renderRecommendations(recommendations) {
+    if (recommendations.length === 0) {
+        showMessage(recommendationResults, "No recommendations found.");
         return;
     }
 
-    const row1 = document.createElement('div');
-    row1.className = 'book-row';
-    const row2 = document.createElement('div');
-    row2.className = 'book-row';
+    const cards = recommendations.map(rec => `
+      <div class="recommendation-card">
+        <img src="${rec.image_url || rec.image || 'placeholder.jpg'}" alt="${rec.title}">
+        <div class="recommendation-info">
+          <h3 title="${rec.title}">${rec.title}</h3>
+          <p class="author text-muted">${rec.author}</p>
+          <div class="score-container">
+            <span class="score hybrid-score">Score: ${rec.hybrid_score?.toFixed(2) || rec.predicted_score?.toFixed(2) || 'N/A'}</span>
+            <span class="score author-sim">Author: ${(rec.author_similarity * 100)?.toFixed(1) || '0'}%</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
 
-    allBooks.slice(0, 5).forEach(book => row1.appendChild(createBookCard(book)));
-    allBooks.slice(5, 10).forEach(book => row2.appendChild(createBookCard(book)));
-
-    myBookListResults.appendChild(row1);
-    myBookListResults.appendChild(row2);
+    recommendationResults.innerHTML = cards;
 }
+  // Display messages
+  function showMessage(container, message) {
+    container.innerHTML = `<div class="message-box">${message}</div>`;
+  }
 
-// Create book card element
-function createBookCard(book) {
-    const card = document.createElement('div');
-    card.className = 'book-card';
-    card.innerHTML = `
-        <img src="${book.image || 'https://via.placeholder.com/150x200?text=No+Cover'}" 
-             alt="${book.title || 'Untitled'}"
-             onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover'">
-        <div class="book-info">
-            <h3>${book.title || 'Untitled'}</h3>
-            <p class="book-author">${book.author || 'Unknown author'}</p>
-            <p class="book-rating">⭐ ${book.rating || 'N/A'}/10</p>
-            <p class="book-isbn">ISBN: ${book.isbn || 'N/A'}</p>
-        </div>`;
-    return card;
-}
+  // Event listeners
+  prevPageBtn.addEventListener('click', () => {
+    if (currentPage > 1) fetchBooks(currentPage - 1);
+  });
 
-// Update pagination UI
-function updatePagination() {
-    const totalPages = Math.ceil(totalBooks / booksPerPage);
-    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    prevPageBtn.disabled = currentPage <= 1;
-    nextPageBtn.disabled = currentPage >= totalPages;
-    document.getElementById('paginationControls').style.display = totalPages > 1 ? 'flex' : 'none';
-}
+  nextPageBtn.addEventListener('click', () => {
+    if (currentPage < totalPages) fetchBooks(currentPage + 1);
+  });
 
-// Pagination buttons
-prevPageBtn.addEventListener('click', () => {
-    if (currentPage > 1) {
-        currentPage--;
-        loadBooks(userIdDisplay.textContent);
-    }
-});
-nextPageBtn.addEventListener('click', () => {
-    const totalPages = Math.ceil(totalBooks / booksPerPage);
-    if (currentPage < totalPages) {
-        currentPage++;
-        loadBooks(userIdDisplay.textContent);
-    }
-});
+  getRecommendationsBtn.addEventListener('click', fetchRecommendations);
 
-// Show message if no books
-function showNoBooksMessage(message) {
-    myBookListResults.innerHTML = `
-        <div class="no-books-message">
-            <p>${message}</p>
-            <button onclick="window.location.href='/login-handle/${userIdDisplay.textContent}'">Search Books to Add</button>
-        </div>`;
-    document.getElementById('paginationControls').style.display = 'none';
-}
+  // Back to search button
+  document.getElementById('backToSearchBtn')?.addEventListener('click', () => {
+    const userId = document.getElementById('userIdDisplay').textContent.trim();
+    window.location.href = `/user/${userId}/service`;
+  });
 
-// Recommendations button
-getRecommendationsBtn.addEventListener('click', async () => {
-    const userId = userIdDisplay.textContent;
-    getRecommendationsBtn.disabled = true;
-    getRecommendationsBtn.textContent = 'Loading...';
+  // Back to main page
+  document.getElementById('backBtn')?.addEventListener('click', () => {
+    window.location.href = '/';
+  });
 
-    try {
-        const res = await fetch(`/api/user/${userId}/recommend`);
-        const data = await res.json();
-
-        recommendationResults.innerHTML = '';
-
-        if (!data.success || !data.recommendations?.length) {
-            recommendationResults.innerHTML = `<p class="no-recommendations">No recommendations found. Try adding more books to your library.</p>`;
-            return;
-        }
-
-        data.recommendations.forEach(rec => {
-            const card = document.createElement('div');
-            card.className = 'recommendation-card';
-            card.innerHTML = `
-                <img src="${rec.image || 'https://via.placeholder.com/150x200?text=No+Cover'}" alt="${rec.title || 'Untitled'}">
-                <div class="recommendation-info">
-                    <h3>${rec.title || 'Untitled'}</h3>
-                    <p>${rec.author || 'Unknown author'}</p>
-                    ${rec.similarity ? `<div class="similarity-badge">Similarity: ${rec.similarity.toFixed(2)}</div>` : ''}
-                    ${rec.predicted_rating ? `<div class="predicted-rating">Predicted rating: ${rec.predicted_rating.toFixed(1)}/10</div>` : ''}
-                </div>`;
-            recommendationResults.appendChild(card);
-        });
-    } catch (error) {
-        console.error('Error loading recommendations:', error);
-        recommendationResults.innerHTML = `<p class="error-message">Error loading recommendations. Please try again.</p>`;
-    } finally {
-        getRecommendationsBtn.disabled = false;
-        getRecommendationsBtn.textContent = 'Get Recommendations';
-    }
+  // Initial load
+  fetchBooks();
 });

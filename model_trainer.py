@@ -1,7 +1,51 @@
+#model_trainer.py
+
+import datetime
 from surprise import Dataset, Reader, KNNBasic, dump
 from surprise.model_selection import train_test_split
 import pandas as pd
 import os
+from surprise import Trainset
+import threading
+import schedule
+from models_loader import load_models_and_data
+
+update_lock = threading.Lock()
+
+def incremental_update(user_id, isbn, rating):
+    """User-Based modeli anlık olarak günceller"""
+    global models
+    
+    with update_lock:
+        try:
+            # Inner ID'leri al
+            user_inner = models['user_based'].trainset.to_inner_uid(user_id)
+            item_inner = models['user_based'].trainset.to_inner_iid(isbn)
+            
+            # Rating matrisini güncelle
+            models['user_based'].trainset.update(user_inner, item_inner, rating)
+            
+            # Benzerlik matrisini yeniden hesapla
+            models['user_based'].compute_similarities()
+            print(f"Model updated for user {user_id}")
+            return True
+        except ValueError:  # Yeni kullanıcı/item durumu
+            print(f"New user/item detected - {user_id}/{isbn}")
+            return False
+        except Exception as e:
+            print(f"Update error: {str(e)}")
+            return False
+
+def schedule_retrain(hour=3):
+    def job():
+        print("\nScheduled retrain started...")
+        train_and_save_models()
+        # Modeli yeniden yükle
+        global models
+        models = load_models_and_data()
+        print("Retrain completed at", datetime.now())
+    
+    schedule.every().day.at(f"{hour:02}:00").do(job)
 
 def optimize_ratings(df):
     """Rating dağılımı düşükse genişletmek için normalizasyon uygular"""
@@ -65,6 +109,7 @@ def train_and_save_models():
     save_metadata(df)
 
     print("\n✅ Eğitim başarıyla tamamlandı!")
+
 
 if __name__ == '__main__':
     train_and_save_models()
