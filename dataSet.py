@@ -9,8 +9,11 @@ import pandas as pd
 import random
 from collections import defaultdict
 
-def analyze_data(df):
-    """Veri setini detaylı analiz eder"""
+def analyze_data():
+    
+    file_path = 'models/newbookdata.csv'
+    df = pd.read_csv(file_path)
+
     print("\n📊 Veri Seti İstatistikleri:")
     print(f"✅ Toplam satır sayısı: {len(df):,}")
     print(f"✅ Benzersiz kullanıcı sayısı: {df['User-ID'].nunique():,}")
@@ -119,9 +122,48 @@ def reduce_users_in_cleaned_data(target_user_count=5000):
     print(f"Yeni benzersiz kitap: {df['ISBN'].nunique():,}")
     print(f"Sonuçlar '{output_path}' dosyasına kaydedildi.")
 
+def create_users_csv(input_csv="newbookdata.csv", output_csv="users.csv"):
+    """
+    Kullanıcı ID'lerini alır ve users.csv dosyasına kaydeder.
+    """
+    # Veriyi oku
+    df = pd.read_csv(input_csv, dtype={'User-ID': str})
+    
+    # Benzersiz kullanıcıları al
+    unique_users = df['User-ID'].dropna().unique()
+    
+    # DataFrame oluştur
+    users_df = pd.DataFrame({'User-ID': unique_users})
+    
+    # CSV dosyasına yaz
+    users_df.to_csv(output_csv, index=False)
+    
+    # Bilgi ver
+    print(f"\n✅ {len(unique_users):,} benzersiz kullanıcı bulundu ve '{output_csv}' dosyasına yazıldı.")
+
+
+def common_books(user1_id, user2_id):
+    file_path = 'models/newbookdata.csv'
+    user_col = 'User-ID'
+    book_col = 'ISBN'
+
+    df = pd.read_csv(file_path)
+    user1_books = set(df[df[user_col] == user1_id][book_col])
+    user2_books = set(df[df[user_col] == user2_id][book_col])
+    
+    common = user1_books & user2_books
+    
+    return {
+        'common_count': len(common),
+        'common_books': list(common)
+    }
 
 if __name__ == '__main__':
   
-    analyze_user_similarity()
-    analyze_item_similarity()
+    # analyze_user_similarity()
+    # analyze_item_similarity()
+    # create_users_csv()  
+    # analyze_data()
+    result = common_books(97324, 23902)
+    print(result)
 

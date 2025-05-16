@@ -2,28 +2,9 @@ from surprise import Dataset, Reader, KNNBasic, dump
 from surprise.model_selection import train_test_split
 import pandas as pd
 import os
-from collections import Counter,defaultdict
-import random
-from tqdm import tqdm
-
-def analyze_data(df):
-    """Veri setini detaylı analiz eder"""
-    print("\n📊 Veri Seti İstatistikleri:")
-    print(f"✅ Toplam satır sayısı: {len(df):,}")
-    print(f"✅ Benzersiz kullanıcı sayısı: {df['User-ID'].nunique():,}")
-    print(f"✅ Benzersiz kitap sayısı: {df['ISBN'].nunique():,}")
-    
-    print("\n⭐ Rating Dağılımı:")
-    print(df['Book-Rating'].value_counts().sort_index())
-    
-    print("\n👥 Kullanıcı Başına Rating Sayısı:")
-    print(df['User-ID'].value_counts().describe())
-    
-    print("\n📚 Kitap Başına Rating Sayısı:")
-    print(df['ISBN'].value_counts().describe())
 
 def optimize_ratings(df):
-    """Rating dağılımını optimize eder"""
+    """Rating dağılımı düşükse genişletmek için normalizasyon uygular"""
     rating_stats = df['Book-Rating'].describe()
     if rating_stats['std'] < 2.0:
         print("\n⚠️ Rating normalizasyonu uygulanıyor...")
@@ -33,18 +14,18 @@ def optimize_ratings(df):
     return df
 
 def train_model(trainset, user_based=True):
-    """Optimize edilmiş model eğitimi"""
+    """Pearson Baseline ile User veya Item tabanlı model eğitimi"""
     sim_options = {
-        'name': 'pearson_baseline',
+        'name': 'pearson_baseline',  
         'user_based': user_based,
-        'shrinkage': 100,
-        'min_support': 5
+        'shrinkage': 100,            # Gürültüyü bastırır
+        'min_support': 3             # En az 3 ortak oylama şartı
     }
-    
-    print(f"\n{'User' if user_based else 'Item'}-Based Model Eğitiliyor...")
+
+    print(f"\n🔧 {'User' if user_based else 'Item'}-Based Model Eğitiliyor (Pearson)...")
     model = KNNBasic(
-        k=30,
-        min_k=3,
+        k=30,                        # Komşu sayısı
+        min_k=3,                     # Tahmin yapmak için en az 3 benzer komşu gerekir
         sim_options=sim_options,
         verbose=True
     )
@@ -52,38 +33,38 @@ def train_model(trainset, user_based=True):
     return model
 
 def save_metadata(df):
-    """Kitap meta verilerini kaydeder"""
+    """Kitap meta verilerini dışa aktarır"""
     meta_cols = ['ISBN', 'Book-Title', 'Book-Author', 'Image-URL-M']
-    df[meta_cols].drop_duplicates().to_csv('book_info.csv', index=False)
+    df[meta_cols].drop_duplicates().to_csv('models/book_info.csv', index=False)
     print("✅ Kitap meta verileri kaydedildi")
 
 def train_and_save_models():
-    """Ana eğitim fonksiyonu"""
-    # Veri yükleme
-    df = pd.read_csv("newbookdata.csv", dtype={'User-ID': str, 'ISBN': str})
+    """Tüm eğitim süreci"""
+    # 1. Veri yükleme
+    df = pd.read_csv("models/newbookdata.csv", dtype={'User-ID': str, 'ISBN': str})
     df = df[['User-ID', 'ISBN', 'Book-Rating', 'Book-Title', 'Book-Author', 'Image-URL-M']]
     
-    # Veri analizi ve optimizasyon
-    analyze_data(df)
+    # 2. Rating normalizasyonu (gerekirse)
     df = optimize_ratings(df)
-    
-    # Model eğitimi
+
+    # 3. Surprise Dataset hazırlığı
     reader = Reader(rating_scale=(1, 10))
     data = Dataset.load_from_df(df[['User-ID', 'ISBN', 'Book-Rating']], reader)
     trainset, _ = train_test_split(data, test_size=0.2)
-    
+
+    # 4. Modellerin eğitimi
     user_model = train_model(trainset, user_based=True)
     item_model = train_model(trainset, user_based=False)
-    
-    # Kayıt işlemleri
+
+    # 5. Modelleri kaydet
     os.makedirs('models', exist_ok=True)
     dump.dump('models/user_based_model', algo=user_model)
     dump.dump('models/item_based_model', algo=item_model)
+
+    # 6. Kitap bilgilerini kaydet
     save_metadata(df)
-    
+
     print("\n✅ Eğitim başarıyla tamamlandı!")
 
-
 if __name__ == '__main__':
-  
-     train_and_save_models()
+    train_and_save_models()

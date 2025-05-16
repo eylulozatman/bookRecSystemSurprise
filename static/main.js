@@ -1,21 +1,22 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Elements
     const userSubmitBtn = document.getElementById('user-submit');
     const itemSubmitBtn = document.getElementById('item-submit');
     const errorAlert = document.getElementById('error-alert');
-    
+
+
     // Autocomplete setup
-    setupAutocomplete('user-id', '/api/search/users/');
+    setupAutocomplete('user-id-main', '/api/search/users/');    
     setupAutocomplete('book-isbn', '/api/search/books/');
     
     // Event listeners
     userSubmitBtn.addEventListener('click', getUserRecommendations);
     itemSubmitBtn.addEventListener('click', getItemRecommendations);
     
+    // Değiştirilmiş JavaScript
     function setupAutocomplete(inputId, endpoint) {
         const input = document.getElementById(inputId);
         const datalist = document.createElement('datalist');
-        datalist.id = `${inputId}-list`;
+        datalist.id = `${inputId}-list`;  // ID'yi inputId'ye göre oluştur
         input.after(datalist);
         input.setAttribute('list', datalist.id);
         
@@ -28,16 +29,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     datalist.innerHTML = '';
                     data.results.forEach(item => {
                         const option = document.createElement('option');
-                        option.value = inputId === 'user-id' ? item.user_id : item.isbn;
+                        option.value = inputId.includes('user') ? item.user_id : item.isbn;
                         datalist.appendChild(option);
                     });
                 })
                 .catch(handleError);
         }, 300));
     }
-    
     function getUserRecommendations() {
-        const userId = document.getElementById('user-id').value.trim();
+        const userId = document.getElementById('user-id-main').value.trim();
         const k = document.getElementById('user-k').value || 5;
         
         if (!userId) {
@@ -114,24 +114,24 @@ document.addEventListener('DOMContentLoaded', function() {
         hideError();
         
         // Show similar users
-        const similarUsersHTML = data.similar_users.map(user => `
-            <span class="similar-user">
-                ${user.user_id} 
-                <span class="similarity">(similarity: ${user.similarity})</span>
-            </span>
+        const similarUsersHTML = data.similar_users.map(user => `\
+            <span class="similar-user">\
+                ${user.user_id}\
+                <span class="similarity">(similarity: ${user.similarity})</span>\
+            </span>\
         `).join(' ');
         
         document.getElementById('similar-users').innerHTML = similarUsersHTML;
         
         // Show recommendations
-        const recommendationsHTML = data.recommendations.map(book => `
-            <tr>
-                <td><img src="${book.image_url || 'https://via.placeholder.com/60x90?text=No+Cover'}" class="img-thumbnail"></td>
-                <td>${book.title}<br><small class="text-muted">${book.isbn}</small></td>
-                <td>${book.author}</td>
-                <td>${book.predicted_score}</td>
-                <td>${book.similarity}</td>
-            </tr>
+        const recommendationsHTML = data.recommendations.map(book => `\
+            <tr>\
+                <td><img src="${book.image_url || 'https://via.placeholder.com/60x90?text=No+Cover'}" class="img-thumbnail"></td>\
+                <td>${book.title}<br><small class="text-muted">${book.isbn}</small></td>\
+                <td>${book.author}</td>\
+                <td>${book.predicted_score}</td>\
+                <td>${book.similarity}</td>\
+            </tr>\
         `).join('');
         
         document.getElementById('user-recommendations').innerHTML = recommendationsHTML;
@@ -143,26 +143,26 @@ document.addEventListener('DOMContentLoaded', function() {
         hideError();
         
         // Show source book
-        const sourceBookHTML = `
-            <img src="${data.source_book.image_url || 'https://via.placeholder.com/60x90?text=No+Cover'}" class="img-thumbnail">
-            <div class="source-book-info">
-                <div class="source-book-title">${data.source_book.title}</div>
-                <div class="source-book-author">${data.source_book.author}</div>
-                <div class="text-muted small">ISBN: ${data.source_book.isbn}</div>
-            </div>
+        const sourceBookHTML = `\
+            <img src="${data.source_book.image_url || 'https://via.placeholder.com/60x90?text=No+Cover'}" class="img-thumbnail">\
+            <div class="source-book-info">\
+                <div class="source-book-title">${data.source_book.title}</div>\
+                <div class="source-book-author">${data.source_book.author}</div>\
+                <div class="text-muted small">ISBN: ${data.source_book.isbn}</div>\
+            </div>\
         `;
         
         document.getElementById('source-book').innerHTML = sourceBookHTML;
         
         // Show similar books
-        const recommendationsHTML = data.recommendations.map(book => `
-            <tr>
-                <td><img src="${book.image_url || 'https://via.placeholder.com/60x90?text=No+Cover'}" class="img-thumbnail"></td>
-                <td>${book.title}<br><small class="text-muted">${book.isbn}</small></td>
-                <td>${book.author}</td>
-                <td>${book.similarity}</td>
-                <td>${book.avg_rating}</td>
-            </tr>
+        const recommendationsHTML = data.recommendations.map(book => `\
+            <tr>\
+                <td><img src="${book.image_url || 'https://via.placeholder.com/60x90?text=No+Cover'}" class="img-thumbnail"></td>\
+                <td>${book.title}<br><small class="text-muted">${book.isbn}</small></td>\
+                <td>${book.author}</td>\
+                <td>${book.similarity}</td>\
+                <td>${book.avg_rating}</td>\
+            </tr>\
         `).join('');
         
         document.getElementById('item-recommendations').innerHTML = recommendationsHTML;
@@ -212,3 +212,4 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 });
+

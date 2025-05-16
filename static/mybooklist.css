@@ -1,0 +1,144 @@
+/* Genel stil ayarları */
+
+:root {
+  /* Renkler */
+  --dark-gray: #2f2f2f;
+  --medium-gray: #595959;
+  --light-gray: #bfbfbf;
+  --background-gray: #5e5e5e;
+  --accent-color: #2d3354; /* Canlı mavi */
+  --accent-color-hover: #303f89; /* Hover için biraz koyu mavi */
+  --success-green: #3d3e76;
+  --success-green-hover: #353566;
+  --white: #9b9285;
+  --black: #000000;
+
+  /* Geçişler */
+  --transition: all 0.3s ease;
+  
+  /* Font */
+  --font-family: Arial, sans-serif;
+}
+
+body {
+  display: flex;
+  margin: 0;
+  font-family: var(--font-family);
+  background-color: var(--background-gray);
+}
+
+/* Kitap listesi bölümü */
+#bookListContainer {
+  background-color: var(--dark-gray);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  margin-bottom: 20px;
+}
+
+/* Kitap ve öneri satırları */
+.book-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+/* Kartlar için ortak yapı */
+.book-card,
+.recommendation-card {
+  background-color: var(--medium-gray);
+  border-radius: 12px;
+  overflow: hidden;
+  width: 150px;
+  text-align: center;
+  color: var(--white);
+  transition: var(--transition);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.book-card:hover,
+.recommendation-card:hover {
+  transform: scale(1.03);
+  background-color: var(--accent-color);
+}
+
+/* Kart içeriği */
+.book-card img,
+.recommendation-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.book-info,
+.recommendation-info {
+  padding: 10px;
+}
+
+/* Kitap başlığı */
+.book-card h3,
+.recommendation-card h3 {
+  font-size: 1rem;
+  margin: 8px 0 4px 0;
+}
+
+/* Alt bilgi */
+.book-author,
+.book-rating,
+.book-isbn,
+.recommendation-info p {
+  font-size: 0.85rem;
+  margin: 4px 0;
+  color: var(--light-gray);
+}
+
+/* Benzerlik ve tahmini puan */
+.similarity-badge,
+.predicted-rating {
+  background-color: var(--success-green);
+  padding: 4px 8px;
+  border-radius: 8px;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  display: inline-block;
+}
+
+.similarity-badge:hover,
+.predicted-rating:hover {
+  background-color: var(--success-green-hover);
+}
+
+/* Sayfa bilgisi */
+#paginationControls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+#paginationControls button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--accent-color);
+  color: var(--white);
+  cursor: pointer;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+#paginationControls button:hover {
+  background-color: var(--accent-color-hover);
+}
+
+/* Mesaj alanı */
+.no-books-message,
+.no-recommendations,
+.error-message {
+  text-align: center;
+  color: var(--light-gray);
+  font-size: 1rem;
+  margin-top: 20px;
+}
