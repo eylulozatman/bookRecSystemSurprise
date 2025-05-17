@@ -116,7 +116,7 @@ def my_book_list(user_id):
 @user_service_bp.route('/api/user/<user_id>/books', methods=['GET'])
 def get_user_books(user_id):
     page = request.args.get('page', 1, type=int)
-    per_page = 5
+    per_page = 10
     try:
         with open(COMPLETE_CSV, encoding='utf-8') as f:
             reader = csv.reader(f)

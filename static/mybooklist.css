@@ -108,9 +108,11 @@ button:disabled {
 
 #myBookListResults {
   display: grid;
-  grid-template-columns: repeat(5, 1fr); 
+  grid-template-columns: repeat(5, 1fr); /* 5 sütun */
+  grid-template-rows: repeat(2, auto);  /* 2 satır */
   gap: 12px; /* Kartlar arası boşluk */
 }
+
 
 .book-card {
   background: white;
@@ -171,7 +173,7 @@ button:disabled {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 320px; /* Sabit yükseklik */
+  height: max-content;
 }
 
 .recommendation-card:hover {

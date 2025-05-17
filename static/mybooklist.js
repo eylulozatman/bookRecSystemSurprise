@@ -86,8 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingRing.style.display = 'none';
         });
 }
-  // Render recommendation cards
-  function renderRecommendations(recommendations) {
+ 
+// Render recommendation cards with detailed explanations
+function renderRecommendations(recommendations) {
     if (recommendations.length === 0) {
         showMessage(recommendationResults, "No recommendations found.");
         return;
@@ -99,9 +100,24 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="recommendation-info">
           <h3 title="${rec.title}">${rec.title}</h3>
           <p class="author text-muted">${rec.author}</p>
+          
           <div class="score-container">
-            <span class="score hybrid-score">Score: ${rec.hybrid_score?.toFixed(2) || rec.predicted_score?.toFixed(2) || 'N/A'}</span>
-            <span class="score author-sim">Author: ${(rec.author_similarity * 100)?.toFixed(1) || '0'}%</span>
+            <span class="score hybrid-score">
+              ${rec.hybrid_score?.toFixed(2) || rec.predicted_score?.toFixed(2) || 'N/A'}
+              <span class="score-label">Overall score</span>
+            </span>
+            
+            <span class="score ${rec.score_type === 'user_similarity' ? 'user-sim' : 'author-sim'}">
+              ${(rec.score_value * 100)?.toFixed(1) || '0'}%
+              <span class="score-label">
+                ${rec.score_type === 'user_similarity' ? 'User match' : 'Author match'}
+              </span>
+            </span>
+          </div>
+          
+          <div class="explanation">
+            <i class="fas fa-info-circle"></i>
+            ${rec.explanation || 'Recommended based on your reading history'}
           </div>
         </div>
       </div>

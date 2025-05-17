@@ -5,7 +5,6 @@ from collections import defaultdict
 from surprise import KNNBasic
 import math
 
-# ORTAK YARDIMCI FONKSİYONLAR
 def to_inner_id(model, raw_id, id_type='user'):
     try:
         if id_type == 'user':
@@ -122,9 +121,8 @@ def get_user_based_recommendations(models, user_id, k=5):
             if item['isbn'] not in read_books:
                 predicted_score = predict_user_based_score(item, similarity, global_avg)
                 
-                # Öneri kalite skoru (benzerlik + kitap popülaritesi)
                 book_popularity = min(1.0, models['avg_ratings'].get(item['isbn'], 5.0) / 10.0)
-                quality_score = 0.6 * similarity + 0.4 * book_popularity
+                quality_score = 0.8 * similarity + 0.2 * book_popularity
                 
                 recommendations.append({
                     **item,
@@ -134,10 +132,11 @@ def get_user_based_recommendations(models, user_id, k=5):
                     'recommendation_type': 'user_based'
                 })
     
-    # Kalite skoruna göre sırala
-    recommendations.sort(key=lambda x: -x['quality_score'])
-    return {'recommendations': recommendations[:k]}, None
-
+    # Return both recommendations and similar users
+    return {
+        'recommendations': recommendations[:k],
+        'similar_users': similar_users[:k]
+    }, None
 
 # --- ITEM-BASED (Değişiklik yok, olduğu gibi bırakıldı) ---
 
@@ -227,77 +226,120 @@ def get_content_based_recommendations(models, user_history, k=5):
     except Exception as e:
         return None, f"Content-based error: {str(e)}"
 
-# 4. GELİŞMİŞ HYBRID FONKSİYON
-def get_hybrid_recommendations(models, user_id, k=5):
-    """Gelişmiş hibrit öneri sistemi"""
+
+from collections import defaultdict
+
+def get_hybrid_recommendations(models, user_id, k=10, similarity_threshold=0.3, min_content_based=2):
+    """Hybrid recommendation system with guaranteed content-based diversity."""
     try:
         user_history = models['user_history'].get(str(user_id), [])
         if len(user_history) < 3:
             return None, "User needs at least 3 rated books"
-        
-        # Tüm öneri türlerini al
-        user_recs, _ = get_user_based_recommendations(models, user_id, k*3)
-        user_recs = user_recs['recommendations'] if user_recs else []
-        
-        content_recs, _ = get_content_based_recommendations(models, user_history, k*3)
-        content_recs = content_recs['recommendations'] if content_recs else []
-        
-        # Okunmuş kitapları filtrele
-        read_books = {book['isbn'] for book in user_history}
-        user_recs = [r for r in user_recs if r['isbn'] not in read_books]
-        content_recs = [r for r in content_recs if r['isbn'] not in read_books]
-        
-        # Hibrit skorlama
-        hybrid_recs = defaultdict(dict)
-        global_avg = np.mean(list(models['avg_ratings'].values())) if models['avg_ratings'] else 5.0
-        
-        # User-based önerilerini ekle
-        for rec in user_recs:
-            hybrid_recs[rec['isbn']].update({
+
+        # 1. Get CF recommendations
+        user_recs_data, _ = get_user_based_recommendations(models, user_id, k * 3)
+        cf_recommendations = user_recs_data.get('recommendations', []) if user_recs_data else []
+        similar_users = user_recs_data.get('similar_users', [])
+
+        # 2. Analyze user's top authors
+        author_counts = defaultdict(int)
+        for book in user_history:
+            author_counts[book['author']] += 1
+        top_authors = [a for a, _ in sorted(author_counts.items(), key=lambda x: -x[1])[:3]]
+
+        # 3. Format CF recommendations
+        user_read_isbns = {b['isbn'] for b in user_history}
+        cf_recs = []
+        for rec in cf_recommendations:
+            if rec['isbn'] in user_read_isbns:
+                continue
+            explanation_parts = []
+            if rec['author'] in top_authors:
+                explanation_parts.append(f"Author match ({rec['author']})")
+            if similar_users:
+                similar_users_str = ", ".join([u['user_id'] for u in similar_users[:2]])
+                explanation_parts.append(f"Similar to users: {similar_users_str}")
+            cf_recs.append({
                 **rec,
-                'user_based_score': rec['predicted_score'],
-                'hybrid_components': {'user_based': rec['predicted_score']}
+                'source': 'cf',
+                'explanation': " | ".join(explanation_parts),
+                'main_score': rec['similarity']
             })
-        
-        # Content-based önerilerini ekle
+
+        # 4. Format content-based recommendations
+        content_recs_data, _ = get_content_based_recommendations(models, user_history, k * 3)
+        content_recs = content_recs_data.get('recommendations', []) if content_recs_data else []
+
+        cb_recs = []
         for rec in content_recs:
-            if rec['isbn'] in hybrid_recs:
-                hybrid_recs[rec['isbn']]['hybrid_components']['content_based'] = rec['content_score']
-            else:
-                hybrid_recs[rec['isbn']].update({
-                    **rec,
-                    'hybrid_components': {'content_based': rec['content_score']}
-                })
-        
-        # Hibrit skor hesapla
-        final_recs = []
-        for isbn, rec in hybrid_recs.items():
-            components = rec['hybrid_components']
-            
-            # Normalizasyon yap
-            user_score = components.get('user_based', global_avg)
-            norm_user = (user_score - 1) / 9.0  # 1-10 => 0-1
-            
-            content_score = components.get('content_based', 0.5)
-            norm_content = max(0.0, min(1.0, content_score))
-            
-            # Hibrit skor (dinamik ağırlık)
-            if 'user_based' in components and 'content_based' in components:
-                hybrid_score = 0.7 * norm_user + 0.3 * norm_content
-            elif 'user_based' in components:
-                hybrid_score = norm_user
-            else:
-                hybrid_score = norm_content
-            
-            final_recs.append({
+            if rec['isbn'] in user_read_isbns:
+                continue
+            explanation = f"Similar to your interest in {rec['author']}'s style"
+            if rec['author'] in top_authors:
+                explanation += f" (your #{top_authors.index(rec['author']) + 1} most-read author)"
+            cb_recs.append({
                 **rec,
-                'hybrid_score': hybrid_score,
-                'final_score': 1 + hybrid_score * 9.0  # 0-1 => 1-10
+                'source': 'content',
+                'explanation': explanation,
+                'main_score': rec['author_similarity']
             })
-        
-        # Sıralama ve sonuç
-        final_recs.sort(key=lambda x: -x['hybrid_score'])
-        return {'recommendations': final_recs[:k]}, None
-    
+
+        # 5. Select top CF and content-based
+        strong_cf = sorted(
+            [r for r in cf_recs if r['main_score'] >= similarity_threshold],
+            key=lambda x: (-x['main_score'], -x.get('quality_score', 0))
+        )[:k - min_content_based]
+
+        strong_cb = sorted(
+            cb_recs,
+            key=lambda x: (-x['main_score'], -x.get('content_score', 0))
+        )[:min_content_based]
+
+        combined = strong_cf + strong_cb
+
+        # 6. Fill remaining slots if needed
+        remaining = k - len(combined)
+        if remaining > 0:
+            remaining_cf = [r for r in cf_recs if r['main_score'] < similarity_threshold and r['isbn'] not in {x['isbn'] for x in combined}]
+            remaining_cb = [r for r in cb_recs if r['isbn'] not in {x['isbn'] for x in combined}]
+            remaining_recs = sorted(
+                remaining_cf + remaining_cb,
+                key=lambda x: (-x['main_score'], -x.get('quality_score', x.get('content_score', 0)))
+            )[:remaining]
+            combined.extend(remaining_recs)
+
+        # 7. Final formatting
+        final_recommendations = []
+        for rec in combined:
+            score_type = 'user_similarity' if rec['source'] == 'cf' else 'author_similarity'
+            hybrid_score = rec.get('quality_score') if score_type == 'user_similarity' else rec.get('content_score')
+            final_recommendations.append({
+                'title': rec['title'],
+                'author': rec['author'],
+                'image_url': rec.get('image_url') or rec.get('image'),
+                'hybrid_score': hybrid_score,
+                'score_value': rec['main_score'],
+                'score_type': score_type,
+                'explanation': rec['explanation'],
+                'isbn': rec['isbn']  # Opsiyonel: Kullanıcıya detay göstermek istersen
+            })
+
+        final_recommendations = sorted(final_recommendations, key=lambda x: -x['hybrid_score'])[:k]
+
+        # Strategy label (opsiyonel)
+        cf_count = sum(1 for r in final_recommendations if r['score_type'] == 'user_similarity')
+        strategy = (
+            "CF-dominant" if cf_count >= k - min_content_based
+            else "Content-balanced" if cf_count >= min_content_based
+            else "Content-supplemented"
+        )
+
+        return {
+            'recommendations': final_recommendations,
+            'strategy': strategy,
+            'cf_ratio': f"{cf_count}/{k}",
+            'content_ratio': f"{k - cf_count}/{k}"
+        }, None
+
     except Exception as e:
-        return None, f"Hybrid recommendation error: {str(e)}"
+        return None, f"Hibrit öneri hatası: {str(e)}"
