@@ -59,10 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
     nextPageBtn.disabled = currentPage >= totalPages;
   }
 
- function fetchRecommendations() {
+
+function fetchRecommendations() {
     console.log("Fetching recommendations...");
     loadingRing.style.display = 'flex';
-    
+
     fetch(`/api/user/${userId}/hybrid-recommend`)
         .then(res => {
             console.log("Response status:", res.status);
@@ -71,12 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(data => {
             console.log("Recommendation data:", data);
-            if (data.success) {
-                renderRecommendations(data.recommendations || []);
-            } else {
-                console.error("Recommendation error:", data.error);
-                showMessage(recommendationResults, data.error);
-            }
+            renderRecommendations(data); // Burada düzeltildi
         })
         .catch(err => {
             console.error("Fetch error:", err);
@@ -86,45 +82,79 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingRing.style.display = 'none';
         });
 }
- 
-// Render recommendation cards with detailed explanations
-function renderRecommendations(recommendations) {
-    if (recommendations.length === 0) {
-        showMessage(recommendationResults, "No recommendations found.");
+
+
+function renderRecommendations(data) {
+    const container = document.getElementById("recommendationResults");
+    container.innerHTML = "";
+
+    if (!data || !data.recommendations || data.recommendations.length === 0) {
+        showMessage(container, "No recommendations available.");
         return;
     }
 
-    const cards = recommendations.map(rec => `
-      <div class="recommendation-card">
-        <img src="${rec.image_url || rec.image || 'placeholder.jpg'}" alt="${rec.title}">
-        <div class="recommendation-info">
-          <h3 title="${rec.title}">${rec.title}</h3>
-          <p class="author text-muted">${rec.author}</p>
-          
-          <div class="score-container">
-            <span class="score hybrid-score">
-              ${rec.hybrid_score?.toFixed(2) || rec.predicted_score?.toFixed(2) || 'N/A'}
-              <span class="score-label">Overall score</span>
-            </span>
-            
-            <span class="score ${rec.score_type === 'user_similarity' ? 'user-sim' : 'author-sim'}">
-              ${(rec.score_value * 100)?.toFixed(1) || '0'}%
-              <span class="score-label">
-                ${rec.score_type === 'user_similarity' ? 'User match' : 'Author match'}
-              </span>
-            </span>
-          </div>
-          
-          <div class="explanation">
-            <i class="fas fa-info-circle"></i>
-            ${rec.explanation || 'Recommended based on your reading history'}
-          </div>
-        </div>
-      </div>
-    `).join('');
+    data.recommendations.forEach(rec => {
+        const card = document.createElement("div");
+        card.className = "recommendation-card";
 
-    recommendationResults.innerHTML = cards;
+        const img = document.createElement("img");
+        img.src = rec.image_url || "default.jpg";
+        img.alt = rec.title;
+
+        const info = document.createElement("div");
+        info.className = "recommendation-info";
+
+        const title = document.createElement("h3");
+        title.textContent = rec.title;
+
+        const author = document.createElement("div");
+        author.className = "author";
+        author.textContent = rec.author;
+
+        const scoreContainer = document.createElement("div");
+        scoreContainer.className = "score-container";
+
+        const score = document.createElement("span");
+        score.className = "score hybrid-score";
+        score.textContent = `Hybrid Score: ${(rec.hybrid_score * 100).toFixed(1)}%`;
+
+        // const raw = document.createElement("span");
+        // raw.className = "score author-sim";
+        // raw.textContent = `Raw Score: ${(rec.raw_score * 100).toFixed(1)}%`;
+
+        const explanation = document.createElement("div");
+        explanation.className = "score font-sm text-muted mt-1";
+        explanation.textContent = rec.explanation;
+
+        // Rozet (Badge)
+        // const badge = document.createElement("span");
+        // badge.className = "badge";
+        // if (rec.source === "cf") {
+        //     badge.classList.add("primary-badge");
+        //     badge.textContent = "Collaborative";
+        // } else {
+        //     badge.classList.add("secondary-badge");
+        //     badge.textContent = "Content-Based";
+        // }
+
+        // Yapıyı birleştir
+        scoreContainer.appendChild(score);
+        // scoreContainer.appendChild(raw);
+        // scoreContainer.appendChild(badge);
+
+        info.appendChild(title);
+        info.appendChild(author);
+        info.appendChild(scoreContainer);
+        info.appendChild(explanation);
+
+        card.appendChild(img);
+        card.appendChild(info);
+
+        container.appendChild(card);
+    });
 }
+
+
   // Display messages
   function showMessage(container, message) {
     container.innerHTML = `<div class="message-box">${message}</div>`;

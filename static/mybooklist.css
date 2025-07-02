@@ -242,8 +242,8 @@ button:disabled {
 }
 
 .primary-badge {
-  background: var(--primary);
-  color: white;
+  background:rgba(201, 130, 130, 0.2);
+  color: gray;
 }
 
 .secondary-badge {

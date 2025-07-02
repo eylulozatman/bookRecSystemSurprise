@@ -1,20 +1,27 @@
-#userService.py
 from flask import Blueprint, request, jsonify, render_template
-
-from model_trainer import incremental_update
-import os , math, csv 
 import pandas as pd
-from models_loader import load_models_and_data
+import csv
+import os
+
 from recommend_algorithm import get_hybrid_recommendations
+from models_loader import load_models_and_data
+models = load_models_and_data()
 
 user_service_bp = Blueprint('user_service', __name__)
-
-
 
 BOOK_INFO_CSV = 'models/book_info.csv'
 COMPLETE_CSV = 'models/newbookdata.csv'
 
-models = load_models_and_data()
+@user_service_bp.route('/api/reload-models', methods=['POST'])
+def reload_models():
+    global models
+    try:
+        load_models_and_data()
+        print("✅ Models reloaded manually.")
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 
 @user_service_bp.route('/user/<int:user_id>/service')
@@ -24,9 +31,8 @@ def user_service(user_id):
 
 @user_service_bp.route('/api/search/books/<query>', methods=['GET'])
 def search_books(query):
-    print(f"Received search query: {query}")
-    page = int(request.args.get('page', 1)) 
-    size = 10
+    page = int(request.args.get('page', 1))
+    size = 5
 
     if not os.path.exists(BOOK_INFO_CSV):
         return jsonify({'success': False, 'message': 'Book data file not found'}), 404
@@ -72,8 +78,7 @@ def get_added_isbns(user_id):
         return jsonify({'success': True, 'isbns': isbns})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-    
-   
+
 
 @user_service_bp.route('/api/user/<user_id>/add-book', methods=['POST'])
 def add_book(user_id):
@@ -87,27 +92,15 @@ def add_book(user_id):
     if not all([isbn, rating, title, author, image]):
         return jsonify({'success': False, 'message': 'Missing data'}), 400
 
-    new_row = [user_id, data['isbn'], data['rating'], data['title'], data['author'], data['image']]
-    with open(COMPLETE_CSV, 'a') as f:
+    new_row = [user_id, isbn, rating, title, author, image]
+    with open(COMPLETE_CSV, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(new_row)
 
-    # 2. Modeli anlık güncelle
-    incremental_update(str(user_id), data['isbn'], float(data['rating']))
-    
-    # 3. Bellekteki user_history'i güncelle
-    if user_id not in models['user_history']:
-        models['user_history'][user_id] = []
-    
-    models['user_history'][user_id].append({
-        'isbn': data['isbn'],
-        'title': data['title'],
-        'rating': float(data['rating']),
-        'author': data['author'],
-        'image_url': data['image']
-    })
+    # Burada model güncelleme kodunu ekle (isteğe bağlı)
 
     return jsonify({'success': True})
+
 
 @user_service_bp.route('/mybooklist/<int:user_id>')
 def my_book_list(user_id):
@@ -138,19 +131,77 @@ def get_user_books(user_id):
         })
 
     except FileNotFoundError:
-        return jsonify({'success': False, 'message': 'No books found', 'books': [], 'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 0}), 404
+        return jsonify({
+            'success': False,
+            'message': 'No books found',
+            'books': [],
+            'total': 0,
+            'page': 1,
+            'per_page': per_page,
+            'total_pages': 0
+        }), 404
+
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e), 'books': [], 'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 0}), 500
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'books': [],
+            'total': 0,
+            'page': 1,
+            'per_page': per_page,
+            'total_pages': 0
+        }), 500
+
+
+
+@user_service_bp.route('/api/user/<user_id>/has-rated', methods=['GET'])
+def has_user_rated(user_id):
+    try:
+        df = pd.read_csv(COMPLETE_CSV, dtype=str, on_bad_lines='skip')
+        count = df[df['User-ID'] == str(user_id)].shape[0]
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@user_service_bp.route('/api/random-books', methods=['GET'])
+def get_random_books():
+    exclude = request.args.getlist('exclude')
+    try:
+        df = pd.read_csv(BOOK_INFO_CSV, dtype=str, on_bad_lines='skip')
+        df = df[~df['ISBN'].isin(exclude)]
+        sampled = df.sample(n=10) if len(df) >= 10 else df
+        books = sampled[['ISBN', 'Book-Title', 'Book-Author', 'Image-URL-M']].to_dict(orient='records')
+        return jsonify({'success': True, 'books': books})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @user_service_bp.route('/api/user/<user_id>/hybrid-recommend', methods=['GET'])
 def get_recommendations(user_id):
-    
+    global models
     try:
+        # İlk deneme
         result, error = get_hybrid_recommendations(models, str(user_id))
-        if error:
-            return jsonify({'success': False, 'error': error}), 400
-            
-        return jsonify({'success': True, **result})
+        if not error:
+            return jsonify({'success': True, **result})
+        
+        # İlk denemede başarısızsa modelleri yeniden yükle
+        print(f"⚠️ First hybrid recommend failed for user {user_id}: {error}")
+        print("🔄 Reloading models...")
+        from models_loader import load_models_and_data
+        models = load_models_and_data()
+
+        # Tekrar dene
+        result, error = get_hybrid_recommendations(models, str(user_id))
+        if not error:
+            print(f"✅ Success after model reload for user {user_id}")
+            return jsonify({'success': True, **result})
+        
+        # Hâlâ başarısızsa, logla ve hata döndür
+        print(f"❌ Recommendation failed even after reload for user {user_id}: {error}")
+        return jsonify({'success': False, 'error': error}), 400
+
     except Exception as e:
+        print(f"🔥 Unexpected exception in hybrid-recommend for user {user_id}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500

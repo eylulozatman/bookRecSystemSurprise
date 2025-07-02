@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Book Search</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='userService.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='userService.css') }}" />
 </head>
 <body>
   <div id="sidebar">
@@ -13,16 +12,15 @@
     <button id="myBookListBtn">Go to My Library</button>
     <button id="backBtn">Back to Main Page</button>
   </div>
-  
+
   <div id="mainContainer">
     <h2>Search Books</h2>
     <div id="searchSection">
-      <input type="text" id="searchInput" placeholder="Search by title or ISBN...">
+      <input type="text" id="searchInput" placeholder="Search by title or ISBN..." />
       <button id="searchBtn">Search</button>
     </div>
     <div id="searchResults"></div>
     <div id="pagination"></div>
-
   </div>
 
   <script src="{{ url_for('static', filename='userService.js') }}"></script>

@@ -1,9 +1,11 @@
 from flask import Flask, render_template ,jsonify,request
 import csv
 from models_loader import load_models_and_data
-from recommend_algorithm import get_user_based_recommendations, get_item_based_recommendations
+from recommend_algorithm import get_user_based_recommendations, get_item_based_recommendations 
 from userService import user_service_bp
 from model_trainer import schedule_retrain
+from recommend_algorithm2 import get_user_based_recommendations1, get_item_based_recommendations1
+
 
 app = Flask(__name__)
 app.register_blueprint(user_service_bp)
@@ -100,4 +102,4 @@ def user_service(user_id):
     return render_template('userService.html', user_id=user_id)
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=True)  

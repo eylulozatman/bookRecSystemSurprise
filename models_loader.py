@@ -1,4 +1,3 @@
-# models_loader.py
 from surprise import dump
 import pandas as pd
 from collections import defaultdict
@@ -47,5 +46,4 @@ def load_models_and_data():
         return None
 
 models = load_models_and_data()
-
 

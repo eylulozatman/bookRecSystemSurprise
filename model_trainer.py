@@ -58,11 +58,10 @@ def optimize_ratings(df):
     return df
 
 def train_model(trainset, user_based=True):
-    """Pearson Baseline ile User veya Item tabanlı model eğitimi"""
     sim_options = {
         'name': 'pearson_baseline',  
         'user_based': user_based,
-        'shrinkage': 100,            # Gürültüyü bastırır
+        'shrinkage': 100,           
         'min_support': 3             # En az 3 ortak oylama şartı
     }
 
@@ -112,4 +111,4 @@ def train_and_save_models():
 
 
 if __name__ == '__main__':
-    train_and_save_models()
+    train_and_save_models()    
