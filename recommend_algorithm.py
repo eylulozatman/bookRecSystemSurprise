@@ -1,9 +1,9 @@
 #recommend_algorithm.py
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TTfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from collections import defaultdict
-from surprise import KNNBasic
+from surprise import KNNBasic, SVD
 import math
 
 def to_inner_id(model, raw_id, id_type='user'):
@@ -27,9 +27,6 @@ def to_raw_id(model, inner_id, id_type='user'):
 def get_neighbors(model, inner_id, k=5):
     return model.get_neighbors(inner_id, k)
 
-
-
-
 def enhanced_pearson_sim(user1_ratings, user2_ratings):
     common_books = set(user1_ratings.keys()) & set(user2_ratings.keys())
     n = len(common_books)
@@ -47,12 +44,8 @@ def enhanced_pearson_sim(user1_ratings, user2_ratings):
 
     pearson = numerator / denominator
     common_weight = min(1.0, math.log(n + 1) / math.log(50))
-    rating_diff = np.mean(np.abs(np.array(ratings1) - np.array(ratings2)))
-    consistency = 1.0 - (rating_diff / 9.0)
-
-    final_sim = pearson * common_weight * consistency
+    final_sim = pearson * common_weight
     return max(-1.0, min(1.0, final_sim))
-
 
 def get_user_based_similar_users(models, user_id, k=5, min_common_books=3):
     if user_id not in models['user_history']:
@@ -82,12 +75,10 @@ def get_user_based_similar_users(models, user_id, k=5, min_common_books=3):
     similar_users.sort(key=lambda x: -x['similarity'])
     return similar_users[:k], None
 
-
 def predict_user_based_score(item, similarity, global_avg=5.0):
     norm_sim = (similarity + 1) / 2.0
     predicted = global_avg + (item['rating'] - global_avg) * norm_sim
     return max(1.0, min(10.0, round(predicted, 2)))
-
 
 def get_user_based_recommendations(models, user_id, k=5):
     similar_users, err = get_user_based_similar_users(models, user_id, k * 2)
@@ -101,16 +92,15 @@ def get_user_based_recommendations(models, user_id, k=5):
     for neighbor in similar_users:
         neighbor_id = neighbor['user_id']
         similarity = neighbor['similarity']
-        boosted_similarity = similarity ** 0.5  # Küçük benzerlikleri yükselt
+        boosted_similarity = similarity ** 0.5
 
         for item in models['user_history'].get(neighbor_id, []):
             if item['isbn'] not in read_books:
                 predicted_score = predict_user_based_score(item, similarity, global_avg)
                 avg_rating = models['avg_ratings'].get(item['isbn'], 5.0)
-                book_popularity = min(1.0, avg_rating / 8.0)  # Daha yüksek popülerlik etkisi
+                book_popularity = min(1.0, avg_rating / 8.0)
 
-                # Final quality score: 0-1 arasında ama daha yüksek
-                quality_score = round(min(1.0, 0.6 * boosted_similarity + 0.4 * book_popularity), 3)
+                quality_score = round((boosted_similarity + book_popularity) / 2.0, 3)
 
                 recommendations.append({
                     **item,
@@ -126,13 +116,12 @@ def get_user_based_recommendations(models, user_id, k=5):
         'similar_users': similar_users[:k]
     }, None
 
-
 def get_item_based_similar_books(models, isbn, k=5):
     inner_id = to_inner_id(models['item_based'], isbn, 'item')
     if inner_id is None:
         return None, 'Item not found'
 
-    neighbors = get_neighbors(models['item_based'], inner_id, k + 1)[1:]  # exclude itself
+    neighbors = get_neighbors(models['item_based'], inner_id, k + 1)[1:]
     similar_books = []
 
     for neighbor_inner_id in neighbors:
@@ -160,7 +149,6 @@ def get_item_based_recommendations(models, isbn, k=5):
         'source_book': source_book,
         'recommendations': similar_books
     }, None
-
 
 
 # 3. GELİŞMİŞ CONTENT-BASED FONKSİYONLAR
@@ -408,4 +396,141 @@ def get_hybrid_recommendations(models, user_id, k=10, similarity_threshold=0.4, 
         return None, f"Hybrid recommendation error: {str(e)}"
     
 
-  
+
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
+# import numpy as np
+# from collections import defaultdict
+# from surprise import KNNBasic
+# import math
+
+# def to_inner_id(model, raw_id, id_type='user'):
+#     try:
+#         if id_type == 'user':
+#             return model.trainset.to_inner_uid(raw_id)
+#         elif id_type == 'item':
+#             return model.trainset.to_inner_iid(raw_id)
+#     except ValueError:
+#         return None
+
+# def to_raw_id(model, inner_id, id_type='user'):
+#     try:
+#         if id_type == 'user':
+#             return model.trainset.to_raw_uid(inner_id)
+#         elif id_type == 'item':
+#             return model.trainset.to_raw_iid(inner_id)
+#     except ValueError:
+#         return None
+
+# def get_neighbors(model, inner_id, k=5):
+#     return model.get_neighbors(inner_id, k)
+
+# def pearson_similarity(user1_ratings, user2_ratings):
+#     common_books = set(user1_ratings.keys()) & set(user2_ratings.keys())
+#     n = len(common_books)
+#     if n == 0:
+#         return 0.0
+
+#     ratings1 = [user1_ratings[book] for book in common_books]
+#     ratings2 = [user2_ratings[book] for book in common_books]
+
+#     mean1, mean2 = np.mean(ratings1), np.mean(ratings2)
+#     numerator = np.sum((np.array(ratings1) - mean1) * (np.array(ratings2) - mean2))
+#     denominator = np.sqrt(np.sum((np.array(ratings1) - mean1) ** 2)) * np.sqrt(np.sum((np.array(ratings2) - mean2) ** 2))
+#     if denominator == 0:
+#         return 0.0
+
+#     return numerator / denominator
+
+# def get_user_based_similar_users(models, user_id, k=5, min_common_books=3):
+#     if user_id not in models['user_history']:
+#         return None, 'User not found'
+
+#     user_books = {item['isbn']: item['rating'] for item in models['user_history'][user_id]}
+#     similar_users = []
+
+#     for other_user, other_history in models['user_history'].items():
+#         if other_user == user_id:
+#             continue
+
+#         other_books = {item['isbn']: item['rating'] for item in other_history}
+#         common_books = set(user_books.keys()) & set(other_books.keys())
+
+#         if len(common_books) >= min_common_books:
+#             similarity = pearson_similarity(user_books, other_books)
+#             similar_users.append({
+#                 'user_id': other_user,
+#                 'similarity': similarity,
+#                 'common_books': len(common_books)
+#             })
+
+#     similar_users.sort(key=lambda x: -x['similarity'])
+#     return similar_users[:k], None
+
+# def predict_user_based_score(item, similarity, global_avg=5.0):
+#     norm_sim = (similarity + 1) / 2.0
+#     predicted = global_avg + (item['rating'] - global_avg) * norm_sim
+#     return max(1.0, min(10.0, round(predicted, 2)))
+
+# def get_user_based_recommendations(models, user_id, k=5):
+#     similar_users, err = get_user_based_similar_users(models, user_id, k * 2)
+#     if err or not similar_users:
+#         return None, err or 'No similar users found'
+
+#     read_books = {item['isbn'] for item in models['user_history'][user_id]}
+#     global_avg = np.mean(list(models['avg_ratings'].values())) if models['avg_ratings'] else 5.0
+
+#     recommendations = []
+#     for neighbor in similar_users:
+#         neighbor_id = neighbor['user_id']
+#         similarity = neighbor['similarity']
+
+#         for item in models['user_history'].get(neighbor_id, []):
+#             if item['isbn'] not in read_books:
+#                 predicted_score = predict_user_based_score(item, similarity, global_avg)
+#                 recommendations.append({
+#                     **item,
+#                     'predicted_score': predicted_score,
+#                     'similarity': similarity,
+#                     'recommendation_type': 'user_based'
+#                 })
+
+#     recommendations.sort(key=lambda x: -x['predicted_score'])
+#     return {
+#         'recommendations': recommendations[:k],
+#         'similar_users': similar_users[:k]
+#     }, None
+
+# def get_item_based_similar_books(models, isbn, k=5):
+#     inner_id = to_inner_id(models['item_based'], isbn, 'item')
+#     if inner_id is None:
+#         return None, 'Item not found'
+
+#     neighbors = get_neighbors(models['item_based'], inner_id, k + 1)[1:]  # exclude itself
+#     similar_books = []
+
+#     for neighbor_inner_id in neighbors:
+#         neighbor_isbn = to_raw_id(models['item_based'], neighbor_inner_id, 'item')
+#         similarity = models['item_based'].sim[inner_id][neighbor_inner_id]
+#         book_info = models['book_info'].get(neighbor_isbn, {})
+#         avg_rating = models['avg_ratings'].get(neighbor_isbn, 0)
+
+#         similar_books.append({
+#             **book_info,
+#             'isbn': neighbor_isbn,
+#             'similarity': round(float(similarity), 3),
+#             'avg_rating': round(avg_rating, 2)
+#         })
+
+#     return similar_books, None
+
+# def get_item_based_recommendations(models, isbn, k=5):
+#     source_book = models['book_info'].get(isbn, {})
+#     similar_books, err = get_item_based_similar_books(models, isbn, k)
+#     if err:
+#         return None, err
+
+#     return {
+#         'source_book': source_book,
+#         'recommendations': similar_books
+#     }, None
